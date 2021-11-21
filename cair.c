@@ -9,6 +9,13 @@ typedef struct car{
     char c;
 } CAR;
 
+typedef struct log{
+    int x, y;
+    int v_x, v_y;
+    char c;
+} LOG;
+
+
 // Set cars position (0:Left-Lane 1:Right-Line)
 void CARsetPOS(CAR * car, int pos);
 
@@ -18,17 +25,24 @@ void initGrid(char * grid, char c);
 // Render grid on console
 void renderGrid(char * grid, CAR car);
 
+
 // Left and right lane coordinates ([0]:Left [1]:Right)
-const int pos_cords[2][2] = {
+const int car_pos_cords[2][2] = {
     {2, HEIGHT - 2},
     {4, HEIGHT - 2}
+};
+
+const int log_init_cords[2][2] = {
+    {2, 1},
+    {4, 1}
 };
 
 int main(){
     char cGrid[HEIGHT * WIDTH]; //Background grid
     initGrid(cGrid, '#');
 
-    CAR car = {.x = pos_cords[0][0], .y = pos_cords[0][1], .c = ' '};
+    CAR car = {.x = car_pos_cords[0][0], .y = car_pos_cords[0][1], .c = ' '};
+    LOG log = {.x = log_init_cords[0][0], .y = log_init_cords[0][1], .c = 'L'};
 
     CARsetPOS(&car, 1);
 
@@ -38,8 +52,8 @@ int main(){
 }
 
 void CARsetPOS(CAR * car, int pos){
-    car -> x = pos_cords[pos][0]; 
-    car -> y = pos_cords[pos][1];
+    car -> x = car_pos_cords[pos][0]; 
+    car -> y = car_pos_cords[pos][1];
 }
 
 void initGrid(char * grid, char c){
