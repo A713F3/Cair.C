@@ -3,16 +3,16 @@
 #include <math.h>
 #include <time.h>
 
-#define HEIGHT 6
+#define HEIGHT 4
 #define WIDTH  6
 
 typedef struct obj{
-    int x, y;     //Position
-    int v_x, v_y; //Velocity
+    int x, y, pos;//Position (0:Left-Lane 1:Right-Lane)
+    int v;        //Velocity
     char c;       //Character
 } OBJECT;
 
-// Set cars position (0:Left-Lane 1:Right-Line)
+// Set objects position 
 void setPOS(OBJECT * obj, int x, int y);
 
 // Initialize grid with character c 
@@ -24,9 +24,9 @@ void renderGrid(char * grid);
 
 // NN Functions 
 double sigmoid(double x);
+double sigmoid_der(double x);
 
 double nnThink(double s_weight, int input);
-
 void nnTrain(double * s_weight, int input, int exp_output);
 
 
@@ -47,31 +47,50 @@ int main(){
     char cGrid[HEIGHT * WIDTH]; //Background grid
     clearGrid(cGrid, '#');
 
-    OBJECT car = {.x = car_coords[0][0], .y = car_coords[0][1], .c = ' '};
-    OBJECT log = {.x = log_coords[0][0], .y = log_coords[0][1],.v_y = 1, .c = 'L'};
+    OBJECT car = {.x = car_coords[1][0], .y = car_coords[1][1], .c = ' '};
+    OBJECT log = {.x = log_coords[0][0], .y = log_coords[0][1], .v = 1, .c = 'L'};
+
+    double s_weight = sigmoid(rand() % 10000);
 
     time_t start = 0;
     time_t end = time(NULL);
 
+    srand(time(NULL));
     int log_init = rand() % 2;
     int collided = 0;
+    int output = 0;
 
     while(1){
         if (end - start > 1){
+            printf("\n-----------------------------\n");
+            printf("Logs pos: %d\n", log.pos);
+            printf("Desicion: %d\n", output);
+
             updateGrid(cGrid, car, log);
             renderGrid(cGrid);
 
             if (log.y == car.y && log.x == car.x) collided = 1;
 
-            setPOS(&log, log.x, log.y + log.v_y);
+            output = nnThink(s_weight, log.pos);
+            if (output > 0.5) setPOS(&car, car_coords[1][0], car_coords[1][1]);
+            else              setPOS(&car, car_coords[0][0], car_coords[0][1]);
 
-            if (log.y > WIDTH || collided){
-                printf("COLLIDED\n\n");
+            setPOS(&log, log.x, log.y + log.v);
+
+            if (collided || log.y >= WIDTH){
                 log_init = rand() % 2;
+
                 setPOS(&log, log_coords[log_init][0], log_coords[log_init][1]);
-                collided = 0;
+                printf("New pos: %d\n\n", log_init);
+            }
+            if (collided){
+                    printf("COLLIDED\n");
+                    nnTrain(&s_weight, log.pos, 1 - log.pos);
+                    printf("Trained synaptic weight: %lf\n", s_weight);
+                    collided = 0;
             }
                 
+            printf("\n-----------------------------\n");
             start = time(NULL);
         }
         end = time(NULL);
@@ -84,6 +103,10 @@ int main(){
 void setPOS(OBJECT * obj, int x, int y){
     obj -> x = x; 
     obj -> y = y;
+
+    //Update pos 
+    if (x == car_coords[0][0]) obj -> pos = 0;
+    else                       obj -> pos = 1;
 }
 
 void clearGrid(char * grid, char c){
@@ -119,6 +142,9 @@ void renderGrid(char * grid){
 double sigmoid(double x){
     return 1 / (1 + exp(x * -1));
 }
+double sigmoid_der(double x){
+    return x * (1 - x);
+}
 
 double nnThink(double s_weight, int input){
     return sigmoid(s_weight * input);
@@ -127,7 +153,8 @@ double nnThink(double s_weight, int input){
 void nnTrain(double * s_weight, int input, int exp_output){
     double output = nnThink(*s_weight, input);
     double error = exp_output - output;
-    double adjustment = error * output;
+    double adjustment = error * sigmoid_der(output);
 
-    *s_weight = sigmoid(*s_weight * adjustment); 
+    *s_weight += adjustment; 
+    *s_weight = sigmoid(*s_weight);
 }
