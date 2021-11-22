@@ -18,7 +18,7 @@ void setPOS(OBJECT * obj, int x, int y);
 // Initialize grid with character c 
 void clearGrid(char * grid, char c);
 // Update grid
-void updateGrid(char * grid, OBJECT car, OBJECT log);
+void updateGrid(char * grid, OBJECT * objs, const int objs_size);
 // Render grid on console
 void renderGrid(char * grid);
 
@@ -27,8 +27,7 @@ double sigmoid(double x);
 double sigmoid_der(double x);
 
 double nnThink(double s_weight, int input);
-void nnTrain(double * s_weight, int input, int exp_output);
-
+void nnTrain(double * s_weight, const double l_rate, double output, int exp_output);
 
 
 // Left and right lane coordinates ([0]:Left [1]:Right)
@@ -50,7 +49,13 @@ int main(){
     OBJECT car = {.x = car_coords[1][0], .y = car_coords[1][1], .c = ' '};
     OBJECT log = {.x = log_coords[0][0], .y = log_coords[0][1], .v = 1, .c = 'L'};
 
+    const int objs_size = 2;
+    OBJECT objs[2] = {car, log};
+
+    updateGrid(cGrid, objs, objs_size);
+
     double s_weight = sigmoid(rand() % 10000);
+    const double l_rate = 0.5;
 
     time_t start = 0;
     time_t end = time(NULL);
@@ -63,19 +68,14 @@ int main(){
     while(1){
         if (end - start > 1){
             printf("\n-----------------------------\n");
-            printf("Logs pos: %d\n", log.pos);
-            printf("Desicion: %d\n", output);
-
-            updateGrid(cGrid, car, log);
             renderGrid(cGrid);
 
+            printf("Log x:%d y:%d\n", log.x, log.y);
+            printf("Car x:%d y:%d\n", car.x, car.y);
+
+
+
             if (log.y == car.y && log.x == car.x) collided = 1;
-
-            output = nnThink(s_weight, log.pos);
-            if (output > 0.5) setPOS(&car, car_coords[1][0], car_coords[1][1]);
-            else              setPOS(&car, car_coords[0][0], car_coords[0][1]);
-
-            setPOS(&log, log.x, log.y + log.v);
 
             if (collided || log.y >= WIDTH){
                 log_init = rand() % 2;
@@ -83,13 +83,25 @@ int main(){
                 setPOS(&log, log_coords[log_init][0], log_coords[log_init][1]);
                 printf("New pos: %d\n\n", log_init);
             }
-            if (collided){
+            if (collided == 1){
                     printf("COLLIDED\n");
-                    nnTrain(&s_weight, log.pos, 1 - log.pos);
+
+                    nnTrain(&s_weight, l_rate, output, 1 - log.pos);
                     printf("Trained synaptic weight: %lf\n", s_weight);
+
                     collided = 0;
             }
-                
+
+            output = nnThink(s_weight, log.pos);
+            setPOS(&car, car_coords[output][0], car_coords[output][1]);
+
+            setPOS(&log, log.x, log.y + log.v);
+
+            updateGrid(cGrid, objs, objs_size);
+
+            printf("Logs pos: %d\n", log.pos);
+            printf("Desicion: %d\n", output);
+
             printf("\n-----------------------------\n");
             start = time(NULL);
         }
@@ -118,11 +130,13 @@ void clearGrid(char * grid, char c){
     }
 }
 
-void updateGrid(char * grid, OBJECT car, OBJECT log){
+void updateGrid(char * grid, OBJECT * objs, const int objs_size){
     clearGrid(grid, '#');
-
-    grid[WIDTH * car.y + car.x] = car.c;
-    grid[WIDTH * log.y + log.x] = log.c;    
+    
+    int i;
+    for (i = 0; i < objs_size; i++){
+        grid[WIDTH * objs[i].y + objs[i].x] = objs[i].c;
+    }  
 }
 
 void renderGrid(char * grid){
@@ -147,13 +161,15 @@ double sigmoid_der(double x){
 }
 
 double nnThink(double s_weight, int input){
-    return sigmoid(s_weight * input);
+    double output = sigmoid(s_weight * input);
+
+    if(output > 0.5) return 1;
+    else             return 0;
 }
 
-void nnTrain(double * s_weight, int input, int exp_output){
-    double output = nnThink(*s_weight, input);
+void nnTrain(double * s_weight, const double l_rate, double output, int exp_output){
     double error = exp_output - output;
-    double adjustment = error * sigmoid_der(output);
+    double adjustment = error * l_rate;
 
     *s_weight += adjustment; 
     *s_weight = sigmoid(*s_weight);
