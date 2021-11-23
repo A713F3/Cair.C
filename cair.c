@@ -70,17 +70,9 @@ int main(){
             updateGrid(cGrid, car, log);
             renderGrid(cGrid);
 
-            printf("Log x:%d y:%d\n", log.x, log.y);
-            printf("Car x:%d y:%d\n", car.x, car.y);
-
             if (log.y == car.y && log.x == car.x) collided = 1;
 
-            if (collided || log.y >= WIDTH){ 
-                log_init = rand() % 2;
-
-                setPOS(&log, log_coords[log_init][0], log_coords[log_init][1]);
-                printf("New pos: %d\n", log_init);
-
+            if (collided || log.y >= HEIGHT){ 
                 if (collided){ 
                     printf("COLLIDED\n");
 
@@ -89,6 +81,11 @@ int main(){
 
                     collided = 0;
                 }
+
+                log_init = rand() % 2;
+
+                setPOS(&log, log_coords[log_init][0], log_coords[log_init][1]);
+                printf("New pos: %d\n", log_init);                
             }
             else {
                 output = nnThink(s_weight, log.pos);
@@ -97,8 +94,8 @@ int main(){
                 setPOS(&log, log.x, log.y + log.v);
 
                 printf("Input          : %d\n", log.pos);
-                printf("Synaptic Weight: %d\n", s_weight);
-                printf("Desicion       : %d\n", output);
+                printf("Synaptic Weight: %lf\n", s_weight);
+                printf("Output         : %d\n", output);
             }
             
             printf("-----------------------------\n");
@@ -149,7 +146,7 @@ void renderGrid(char * grid){
 // NN Functions 
 
 double activation(double x){
-    return exp(x) - exp(-1 * x) / exp(x) + exp(-1 * x);
+    return (exp(x) - exp(-1 * x)) / (exp(x) + exp(-1 * x));
 }
 
 double nnThink(double s_weight, int input){
