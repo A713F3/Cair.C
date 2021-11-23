@@ -15,46 +15,50 @@ typedef struct obj{
 // Set objects position 
 void setPOS(OBJECT * obj, int x, int y);
 
-// Initialize grid with character c 
+// Clear grid with character c 
 void clearGrid(char * grid, char c);
 // Update grid
-void updateGrid(char * grid, OBJECT * objs, const int objs_size);
+void updateGrid(char * grid, OBJECT ** objs, const int objs_size);
 // Render grid on console
 void renderGrid(char * grid);
 
 // NN Functions 
 double sigmoid(double x);
-double sigmoid_der(double x);
 
 double nnThink(double s_weight, int input);
 void nnTrain(double * s_weight, const double l_rate, double output, int exp_output);
 
 
-// Left and right lane coordinates ([0]:Left [1]:Right)
+// Left and right lane coordinates 
 const int car_coords[2][2] = {
-    {1, HEIGHT - 2},
-    {4, HEIGHT - 2}
+    {1, HEIGHT - 2}, //Left-Lane
+    {4, HEIGHT - 2} //Right-Lane
 };
 
 // Log starting coordinates ([0]:Left [1]:Right)
 const int log_coords[2][2] = {
-    {1, 0},
-    {4, 0}
+    {1, 0}, //Left-Lane
+    {4, 0} //Right-Lane
 };
 
 int main(){
     char cGrid[HEIGHT * WIDTH]; //Background grid
     clearGrid(cGrid, '#');
 
-    OBJECT car = {.x = car_coords[1][0], .y = car_coords[1][1], .c = ' '};
-    OBJECT log = {.x = log_coords[0][0], .y = log_coords[0][1], .v = 1, .c = 'L'};
+    OBJECT car = {.pos = 0, .c = ' '};
+    car.x = car_coords[car.pos][0];
+    car.y = car_coords[car.pos][1];
+
+    OBJECT log = {.pos = 0, .v = 1, .c = 'L'};
+    log.x = log_coords[log.pos][0];
+    log.y = log_coords[log.pos][1];
 
     const int objs_size = 2;
-    OBJECT objs[2] = {car, log};
+    OBJECT * objs[objs_size] = {&car, &log}; //Objects list
 
-    updateGrid(cGrid, objs, objs_size);
+    //updateGrid(cGrid, objs, objs_size);
 
-    double s_weight = sigmoid(rand() % 10000);
+    double s_weight = sigmoid(rand() % 10);
     const double l_rate = 0.5;
 
     time_t start = 0;
@@ -68,40 +72,39 @@ int main(){
     while(1){
         if (end - start > 1){
             printf("\n-----------------------------\n");
+            updateGrid(cGrid, objs, objs_size);
             renderGrid(cGrid);
 
             printf("Log x:%d y:%d\n", log.x, log.y);
             printf("Car x:%d y:%d\n", car.x, car.y);
 
-
-
             if (log.y == car.y && log.x == car.x) collided = 1;
 
-            if (collided || log.y >= WIDTH){
+            if (log.y >= WIDTH){ //collided == 1 ||
                 log_init = rand() % 2;
 
                 setPOS(&log, log_coords[log_init][0], log_coords[log_init][1]);
                 printf("New pos: %d\n\n", log_init);
-            }
-            if (collided == 1){
+
+                if (0){ //collided == 1
                     printf("COLLIDED\n");
 
                     nnTrain(&s_weight, l_rate, output, 1 - log.pos);
                     printf("Trained synaptic weight: %lf\n", s_weight);
 
                     collided = 0;
+                }
             }
+            else {
+                output = nnThink(s_weight, log.pos);
+                setPOS(&car, car_coords[output][0], car_coords[output][1]);
 
-            output = nnThink(s_weight, log.pos);
-            setPOS(&car, car_coords[output][0], car_coords[output][1]);
+                setPOS(&log, log.x, log.y + log.v);
 
-            setPOS(&log, log.x, log.y + log.v);
-
-            updateGrid(cGrid, objs, objs_size);
-
-            printf("Logs pos: %d\n", log.pos);
-            printf("Desicion: %d\n", output);
-
+                printf("Input   : %d\n", log.pos);
+                printf("Desicion: %d\n", output);
+            }
+            
             printf("\n-----------------------------\n");
             start = time(NULL);
         }
@@ -113,12 +116,11 @@ int main(){
 }
 
 void setPOS(OBJECT * obj, int x, int y){
+    //Update pos if x changes
+    if (x != obj -> x) obj -> pos = 1 - obj -> pos;
+
     obj -> x = x; 
     obj -> y = y;
-
-    //Update pos 
-    if (x == car_coords[0][0]) obj -> pos = 0;
-    else                       obj -> pos = 1;
 }
 
 void clearGrid(char * grid, char c){
@@ -130,12 +132,12 @@ void clearGrid(char * grid, char c){
     }
 }
 
-void updateGrid(char * grid, OBJECT * objs, const int objs_size){
+void updateGrid(char * grid, OBJECT ** objs, const int objs_size){
     clearGrid(grid, '#');
-    
+
     int i;
     for (i = 0; i < objs_size; i++){
-        grid[WIDTH * objs[i].y + objs[i].x] = objs[i].c;
+        grid[WIDTH * (*objs)[i].y + (*objs)[i].x] = (*objs)[i].c;
     }  
 }
 
@@ -155,9 +157,6 @@ void renderGrid(char * grid){
 
 double sigmoid(double x){
     return 1 / (1 + exp(x * -1));
-}
-double sigmoid_der(double x){
-    return x * (1 - x);
 }
 
 double nnThink(double s_weight, int input){
