@@ -23,7 +23,7 @@ void updateGrid(char * grid, OBJECT car, OBJECT log);
 void renderGrid(char * grid);
 
 // NN Functions 
-double sigmoid(double x);
+double activation(double x);
 
 double nnThink(double s_weight, int input);
 void nnTrain(double * s_weight, const double l_rate, double output, int exp_output);
@@ -53,8 +53,8 @@ int main(){
     log.x = log_coords[log.pos][0];
     log.y = log_coords[log.pos][1];
 
-    double s_weight = sigmoid(rand() % 10);
-    const double l_rate = 0.5;
+    double s_weight = activation(rand() % 10);
+    const double l_rate = 1;
 
     time_t start = 0;
     time_t end = time(NULL);
@@ -79,7 +79,7 @@ int main(){
                 log_init = rand() % 2;
 
                 setPOS(&log, log_coords[log_init][0], log_coords[log_init][1]);
-                printf("New pos: %d\n\n", log_init);
+                printf("New pos: %d\n", log_init);
 
                 if (collided){ 
                     printf("COLLIDED\n");
@@ -96,8 +96,9 @@ int main(){
 
                 setPOS(&log, log.x, log.y + log.v);
 
-                printf("Input   : %d\n", log.pos);
-                printf("Desicion: %d\n", output);
+                printf("Input          : %d\n", log.pos);
+                printf("Synaptic Weight: %d\n", s_weight);
+                printf("Desicion       : %d\n", output);
             }
             
             printf("-----------------------------\n");
@@ -147,12 +148,12 @@ void renderGrid(char * grid){
 
 // NN Functions 
 
-double sigmoid(double x){
-    return 1 / (1 + exp(x * -1));
+double activation(double x){
+    return exp(x) - exp(-1 * x) / exp(x) + exp(-1 * x);
 }
 
 double nnThink(double s_weight, int input){
-    double output = sigmoid(s_weight * input);
+    double output = activation(s_weight * input);
 
     if(output > 0.5) return 1;
     else             return 0;
@@ -163,5 +164,5 @@ void nnTrain(double * s_weight, const double l_rate, double output, int exp_outp
     double adjustment = error * l_rate;
 
     *s_weight += adjustment; 
-    *s_weight = sigmoid(*s_weight);
+    //*s_weight = activation(*s_weight);
 }
