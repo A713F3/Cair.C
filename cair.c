@@ -25,7 +25,7 @@ void renderGrid(char * grid);
 // NN Functions 
 double activation(double x);
 
-double nnThink(double s_weight, int input);
+double nnThink(double s_weight, double bias, int input);
 void nnTrain(double * s_weight, const double l_rate, double output, int exp_output);
 
 
@@ -54,6 +54,7 @@ int main(){
     log.y = log_coords[log.pos][1];
 
     double s_weight = activation(rand() % 10);
+    double bias = 0.5;
     const double l_rate = 1;
 
     time_t start = 0;
@@ -88,13 +89,14 @@ int main(){
                 printf("New pos: %d\n", log_init);                
             }
             else {
-                output = nnThink(s_weight, log.pos);
+                output = nnThink(s_weight, bias, log.pos);
                 setPOS(&car, car_coords[output][0], car_coords[output][1]);
 
                 setPOS(&log, log.x, log.y + log.v);
 
                 printf("Input          : %d\n", log.pos);
                 printf("Synaptic Weight: %lf\n", s_weight);
+                printf("Bias           : %lf\n", bias);
                 printf("Output         : %d\n", output);
             }
             
@@ -149,11 +151,11 @@ double activation(double x){
     return (exp(x) - exp(-1 * x)) / (exp(x) + exp(-1 * x));
 }
 
-double nnThink(double s_weight, int input){
-    double output = activation(s_weight * input);
+double nnThink(double s_weight, double bias, int input){
+    double output = activation((s_weight * input) + bias);
 
-    if(output > 0.5) return 1;
-    else             return 0;
+    if(output > 0) return 1;
+    else           return 0;
 }
 
 void nnTrain(double * s_weight, const double l_rate, double output, int exp_output){
@@ -161,5 +163,5 @@ void nnTrain(double * s_weight, const double l_rate, double output, int exp_outp
     double adjustment = error * l_rate;
 
     *s_weight += adjustment; 
-    //*s_weight = activation(*s_weight);
+    *s_weight = activation(*s_weight);
 }
