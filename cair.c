@@ -18,7 +18,7 @@ void setPOS(OBJECT * obj, int x, int y);
 // Clear grid with character c 
 void clearGrid(char * grid, char c);
 // Update grid
-void updateGrid(char * grid, OBJECT ** objs, const int objs_size);
+void updateGrid(char * grid, OBJECT car, OBJECT log);
 // Render grid on console
 void renderGrid(char * grid);
 
@@ -53,11 +53,6 @@ int main(){
     log.x = log_coords[log.pos][0];
     log.y = log_coords[log.pos][1];
 
-    const int objs_size = 2;
-    OBJECT * objs[objs_size] = {&car, &log}; //Objects list
-
-    //updateGrid(cGrid, objs, objs_size);
-
     double s_weight = sigmoid(rand() % 10);
     const double l_rate = 0.5;
 
@@ -72,7 +67,7 @@ int main(){
     while(1){
         if (end - start > 1){
             printf("\n-----------------------------\n");
-            updateGrid(cGrid, objs, objs_size);
+            updateGrid(cGrid, car, log);
             renderGrid(cGrid);
 
             printf("Log x:%d y:%d\n", log.x, log.y);
@@ -80,13 +75,13 @@ int main(){
 
             if (log.y == car.y && log.x == car.x) collided = 1;
 
-            if (log.y >= WIDTH){ //collided == 1 ||
+            if (collided || log.y >= WIDTH){ 
                 log_init = rand() % 2;
 
                 setPOS(&log, log_coords[log_init][0], log_coords[log_init][1]);
                 printf("New pos: %d\n\n", log_init);
 
-                if (0){ //collided == 1
+                if (collided){ 
                     printf("COLLIDED\n");
 
                     nnTrain(&s_weight, l_rate, output, 1 - log.pos);
@@ -105,12 +100,11 @@ int main(){
                 printf("Desicion: %d\n", output);
             }
             
-            printf("\n-----------------------------\n");
+            printf("-----------------------------\n");
             start = time(NULL);
         }
         end = time(NULL);
     }
-
 
     return 0;
 }
@@ -132,13 +126,11 @@ void clearGrid(char * grid, char c){
     }
 }
 
-void updateGrid(char * grid, OBJECT ** objs, const int objs_size){
+void updateGrid(char * grid, OBJECT car, OBJECT log){
     clearGrid(grid, '#');
 
-    int i;
-    for (i = 0; i < objs_size; i++){
-        grid[WIDTH * (*objs)[i].y + (*objs)[i].x] = (*objs)[i].c;
-    }  
+    grid[WIDTH * car.y + car.x] = car.c;
+    grid[WIDTH * log.y + log.x] = log.c;
 }
 
 void renderGrid(char * grid){
